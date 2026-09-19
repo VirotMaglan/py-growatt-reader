@@ -1,8 +1,11 @@
 import growattServer
 
-# Anmeldedaten der ShinePhone App / Growatt Server
+# ==========================================
+# KONFIGURATION
+# ==========================================
 USERNAME = '<USER>'
 PASSWORD = '<PASSWORD>'
+DEVICE_SN = '<DEVICE_SN>'  # Hier die Seriennummer eintragen
 
 try:
     api = growattServer.GrowattApi()
@@ -16,8 +19,12 @@ try:
     plants = plant_list.get('data', []) if isinstance(plant_list, dict) else plant_list
     plant_id = plants[0]['plantId']
 
+    # OPTIONAL: Falls du die Seriennummer automatisch vom ersten Gerät der Anlage abrufen möchtest:
+    # devices = api.device_list(plant_id)
+    # DEVICE_SN = devices[0]['deviceSn']
+
     # 1. Live-Daten abrufen
-    mix_data = api.mix_system_status('TNJ4CCQ054', plant_id)
+    mix_data = api.mix_system_status(DEVICE_SN, plant_id)
 
     pv_power = float(mix_data.get('ppv', 0))
     house_load = float(mix_data.get('pLocalLoad', 0))
@@ -33,7 +40,7 @@ try:
     e_to_user = 0.0
 
     try:
-        totals = api.mix_totals('TNJ4CCQ054', plant_id)
+        totals = api.mix_totals(DEVICE_SN, plant_id)
         e_to_grid = float(totals.get('etoGridToday') or 0)
         
         load_today = float(totals.get('elocalLoadToday') or 0)
@@ -46,7 +53,7 @@ try:
     except Exception:
         pass
 
-    # Farb-Formatiere für PV-Leistung
+    # Farb-Formatierung für PV-Leistung
     if pv_power < 0.05:
         pv_str = "${color #888888}0.0 kW${color}"
     else:
@@ -83,12 +90,15 @@ try:
     else:
         bat_status = "${color #888888}Standby${color}"
 
-    # Ausgabe
+    # Ausgabe (Conky-Syntax)
     print("${color #ffffff}PV-Leistung:${goto 110}" + pv_str)
     print("${color #ffffff}Verbrauch:${goto 110}" + f"{house_load:.1f}" + " kW")
     print("${color #ffffff}Netz:${goto 110}" + grid_status)
     print("${color #ffffff}Einspeis.:${goto 110}" + grid_today_str)
     print("${color #ffffff}Bezug:${goto 110}" + user_today_str)
+
+except Exception as e:
+    print(f"Fehler beim Abrufen der Daten: {e}")
     print("${color #ffffff}Akku:${goto 110}" + f"{soc}" + "% [" + bar + "] " + bat_status)
 
 except Exception as e:
